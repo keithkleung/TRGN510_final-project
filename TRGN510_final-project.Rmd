@@ -1,0 +1,173 @@
+---
+title: "TRGN510_final-project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load in the required packages
+```{r}
+library(limma)
+library(Glimma)
+library(edgeR)
+library(Homo.sapiens)
+```
+
+## Loading in the data
+```{r}
+setwd("~/R_files/510project")
+
+files <- c("00a47e69-ef6a-4be9-827d-d48609859a7e.htseq.counts", "0211f2ea-a4f6-4a57-8f98-66bf0a327479.htseq.counts", "0abe1897-c3a9-47e5-8a59-e5a2232b23db.htseq.counts", "23f8f5e2-25b8-4b43-b939-66e7e3f55977.htseq.counts", "36d40974-4d4f-4726-b98f-1ceab329d0bf.htseq.counts", "45c4eed7-f80d-4d33-abbb-321ff5ed0750.htseq.counts", "4ba6c212-ef90-4ab3-b551-35c05cb6df90.htseq.counts", "54401c2a-7124-42b7-90d8-6267575bce51.htseq.counts", "5fbf674e-49f3-4af8-9c9c-20a528ad0684.htseq.counts", "6515c0f7-2334-4bad-bde7-b562f5f67148.htseq.counts", "68b3162f-a77a-4630-a64a-26a33a2ecb12.htseq.counts", "6f618400-b914-4103-bf46-9c026b470aa0.htseq.counts", "7d229eb4-cdbd-4578-9e54-c7cbd7ef1378.htseq.counts", "7d83af5d-9bcf-4c82-a993-fa9053a9b3cb.htseq.counts", "8a244dd2-0dc1-429c-81a1-5873ce536b47.htseq.counts", "a8a58442-78f5-4876-b25e-c04339eb6f26.htseq.counts", "aa08f8f5-e41d-4987-aa65-5cfe5fedeb1b.htseq.counts", "b667a6ae-353f-4045-a442-a4320231ed73.htseq.counts", "d6608d24-28bc-4d51-b6d8-8fec450a858f.htseq.counts", "dc322491-2407-401e-a422-96be40d6518f.htseq.counts", "0827bd64-de4e-45bc-9e75-a9bdce41f4a5.htseq.counts", "1d102e83-ede2-460e-ab2e-f42d8db6970e.htseq.counts", "34dd2d8f-6b3c-42ec-94c6-2c3eb75e8b91.htseq.counts", "37c712b1-00b7-4db2-8728-88816e06bbdd.htseq.counts", "3f9f9a93-3270-462b-a014-567f98a963cf.htseq.counts", "4253d955-2f01-4657-909e-756c899dd81d.htseq.counts", "4a775326-e623-47d4-b105-d32fc21afb8a.htseq.counts", "4fd01cd7-7ff5-4570-891e-747a0c640ddc.htseq.counts", "68872445-c6f8-4e6a-b0b3-dcaa53e70e56.htseq.counts", "7eed3c23-853b-4d0e-9b2d-81990f2ca0c6.htseq.counts", "891fa657-fa9c-46b3-b751-e337d88e08ae.htseq.counts", "8fd4ceba-6ad2-4726-bf8b-f0316640305c.htseq.counts", "96ddce60-2be5-4f57-814b-35722aa00fd9.htseq.counts", "be0d2e41-7373-4fa9-9c05-877e9ddcb88c.htseq.counts", "cf1a1478-68c1-431b-86cb-c4ddb105accf.htseq.counts", "d70033a1-9000-493f-9474-6e9e3f47b851.htseq.counts", "d806b4fb-807b-4d66-b17f-c2e381675e4f.htseq.counts", "d9b4ed1e-39fe-4378-a9f8-f5f74a284c57.htseq.counts", "e3067466-096f-4bea-993f-b0469a7e11e3.htseq.counts", "ef9be0f1-2a17-49b9-b90e-2bb2e4f43c84.htseq.counts")
+
+read.delim(files[1], nrow=5, header=FALSE)
+getwd()
+```
+The data has been loaded in successfully.
+
+## Grouping the data
+The contents of each file is combined into one dataframe called as ‘x’. The data is grouped according to the parameter of ethnicity: white vs. Asian. EdgeR provides a simplified method of doing this with a single command: readDGE.
+```{r}
+x <- readDGE(files, columns=c(1,2))
+class(x)
+```
+
+The newly created dataframe "x" can be checked for its dimensions to see if the readDGE command worked.
+```{r}
+dim(x)
+```
+The dim function shows that there are 60487 rows (which represents genes) and 40 columns. The 40 columns represents the 40 files (20 Asian females and 20 white females).
+
+The code block below will help to label all the columns in dataframe "x" according to the respective files.
+```{r}
+samplenames<-colnames(x)
+sampleNames
+colnames(x) <- samplenames
+```
+
+## Organizing the data
+The code below will help to group the files within the data frame according to the patient ethnicity.
+```{r}
+group <- c(rep("Asian",20), rep("white",20))
+x$samples$group <- group
+x$samples
+```
+
+Because the “Homo.sapiens” package does not contain the ENSEMBL Gene ID in the format provided by the loaded data, the data must be converted using a substitution function. The digits following the decimal are replaced to match with the key.
+```{r}
+library(gsubfn)
+geneid <- rownames(x)
+geneid <-gsub("\\.[0-9]*$","", geneid)
+head(geneid)
+```
+
+The "genes" dataframe is used to store the gene-level information corresponding to the rows of genes in our patient data files. The information required for this data frame is retrieved from the ‘Homo.sapiens’ library. The GeneIDs are associated with the symbol and the chromosome number of each gene.
+```{r}
+genes <- select(Homo.sapiens, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
+                keytype="ENSEMBL")
+head(genes)
+```
+
+Any duplicated genes are removed from the dataset.
+```{r}
+genes <- genes[!duplicated(genes$ENSEMBL),]
+x$genes <- genes
+x
+```
+
+## Data Pre-processing
+## Transformations from the raw scale
+The data is transformed from its raw form to more useable. The calculations of “cpm: counts per million” and “lcpm: log of counts per million” are carried out to do so.
+```{r}
+cpm <- cpm(x)
+lcpm <- cpm(x, log=TRUE)
+```
+
+For further calculations the data is processed using the calculations below. L is the average library size in millions. M is the median of the library size in millions.
+```{r}
+L <- mean(x$samples$lib.size) * 1e-6
+M <- median(x$samples$lib.size) * 1e-6
+c(L, M)
+```
+
+The summary of the lcpm calculation is shown below.
+```{r}
+summary(lcpm)
+```
+
+## Removing genes that are lowly expressed
+Some genes are lowly expressed and do not contribute to the statistical analysis in a meaningful manner. These are genes that are lowly expressed in both of the data groups. To understand the ratio of these genes, the following line is run:
+```{r}
+table(rowSums(x$counts==0)==9)
+```
+
+EdgeR helps to filter out these lowly expressed genes rather easily:
+```{r}
+keep.exprs <- filterByExpr(x, group=group)
+x <- x[keep.exprs,, keep.lib.sizes=FALSE]
+dim(x)
+```
+
+The number of genes used for interpretation are reduced from the 60,487 to 20886. The filtered versus unfiltered data is presented in a graphical manner using the following lines of code. The package “RColorBrewer” is used to help create the graphs.
+```{r}
+lcpm.cutoff <- log2(10/M + 2/L)
+library(RColorBrewer)
+nsamples <- ncol(x)
+col <- brewer.pal(nsamples, "Paired")
+par(mfrow=c(1,2))
+plot(density(lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="A. Raw data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:nsamples){
+den <- density(lcpm[,i])
+lines(den$x, den$y, col=col[i], lwd=2)
+}
+legend("topright", samplenames, text.col=col, bty="n")
+lcpm <- cpm(x, log=TRUE)
+plot(density(lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="B. Filtered data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:nsamples){
+den <- density(lcpm[,i])
+lines(den$x, den$y, col=col[i], lwd=2)
+}
+legend("topright", samplenames, text.col=col, bty="n")
+```
+
+## Normalizing gene expression distributions
+For statistical analysis, the normalization of data is greatly beneficial. Normalization should be performed to ensure that the expression distributions of each sample are similar across the entire experiment. edgeR offers a function to do this. The resulting values are stored in a data set called norm.factors.
+```{r}
+x <- calcNormFactors(x, method = "TMM")
+x$samples$norm.factors
+```
+
+To understand this effect the data is manipulated in such a way that the counts of the first sample are reduced to 5% and the second is increased by 500%.
+```{r}
+x2 <- x
+x2$samples$norm.factors <- 1
+x2$counts[,1] <- ceiling(x2$counts[,1]*0.05)
+x2$counts[,2] <- x2$counts[,2]*5
+```
+
+The plots below shows data that is normalized versus non-normalized.
+```{r}
+par(mfrow=c(1,2))
+lcpm <- cpm(x2, log=TRUE)
+boxplot(lcpm, las=2, col=col, main="")
+title(main="A. Example: Unnormalised data",ylab="Log-cpm")
+x2 <- calcNormFactors(x2)  
+x2$samples$norm.factors
+```
+```{r}
+lcpm <- cpm(x2, log=TRUE)
+boxplot(lcpm, las=2, col=col, main="")
+title(main="B. Example: Normalised data",ylab="Log-cpm")
+```
+
+
+
+
+
+
+
