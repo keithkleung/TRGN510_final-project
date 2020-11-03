@@ -59,9 +59,11 @@ Asian females counts data (from GDC portal)
 
 ## Milestone 1
 - I want to successfully be able to pool all my data files together from the TCGA website and load them into R. Afterwards, I want to make sure the files are the correct format in which they can be worked with using Bioconductor, and that the data from the files are changed from their raw form and into an accessible form for data analyses. My work will be checked for by doing some calculations with the counts data.
+  - **Update status 11/3/2020**: *This milestone has been achieved*
 
 ## Milestone 2
 - I want to be able to generate plots of my data to display what the sequencing results mean. Some of the plots will likely include boxplots, heatmaps, and mean-variance plots.
+  - **Update status 11/3/2020**: *This milestone is ongoing*
 
 ## Deliverable:
 - R Markdown
