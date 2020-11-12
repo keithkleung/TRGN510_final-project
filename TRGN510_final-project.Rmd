@@ -155,16 +155,140 @@ The plots below shows data that is normalized versus non-normalized.
 par(mfrow=c(1,2))
 lcpm <- cpm(x2, log=TRUE)
 boxplot(lcpm, las=2, col=col, main="")
-title(main="A. Example: Unnormalised data",ylab="Log-cpm")
+title(main="A. Example: Unnormalized data",ylab="Log-cpm")
 x2 <- calcNormFactors(x2)  
 x2$samples$norm.factors
 ```
 ```{r}
 lcpm <- cpm(x2, log=TRUE)
 boxplot(lcpm, las=2, col=col, main="")
-title(main="B. Example: Normalised data",ylab="Log-cpm")
+title(main="B. Example: Normalized data",ylab="Log-cpm")
 ```
 
+## Unsupervised clustering of samples
+The MDS plot is an informative representation of the similarities and dissimilarities in a sample. The extent of the differences can give an idea of the expected results of the differential expression analysis. The plotMDS function of limma allows us to create the graph. The distances on the plot correspond to the action of different categories on this data.
+```{r}
+lcpm <- cpm(x, log=TRUE)
+par(mfrow=c(1,2))
+group
+levels(group) <-  brewer.pal(nlevels(group), "Set1")
+col.group <- as.character(group)
+col.group <- c("purple","orange")[group]
+plotMDS(lcpm, labels=group, col=col.group)
+title(main="A. Sample groups")
+```
+
+Glimma can be used to create an interactive version of the plot above.
+```{r}
+glMDSPlot(lcpm,groups = group)
+```
+
+# Differential expression analyses
+## Creating a design matrix and contrasts
+To begin differential expression analysis, a design matrix with both the Asian group of data and white group of data needs to be created:
+```{r}
+design <- model.matrix(~0+group)
+colnames(design) <- gsub("group", "", colnames(design))
+design
+```
+
+Contrasts for the two groups are stored within a matrix:
+```{r}
+contr.matrix <- makeContrasts(
+   AsianVswhite = Asian-white, 
+   levels = colnames(design))
+contr.matrix
+```
+
+## Removing heteroscedascity from count data
+Voom is a function within limma that allows the raw counts data to be transformed into the normalized data that accommodates the mean-variance relationship.
+```{r}
+par(mfrow=c(1,2))
+v <- voom(x, design, plot=TRUE)
+v
+```
+
+In these two plots, the relationship between the mean and variances of the data are plot. The first graph represents the relationship before the data is normalized using voom and second, after. The effect of normalization can be visualized through the lines of best fit.
+```{r}
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+plotSA(efit, main="Final model: Mean-variance trend")
+```
+
+## Examining the number of differentially expressed genes
+T-statistics can be used to help see how many genes are significantly up-regulated or down-regulated. In the table below, we see that 6 genes are down-regulated and 7 genes are up-regulated.
+```{r}
+summary(decideTests(efit))
+```
+
+Additional filtering of significantly DF genes may be done by using the treat method, which requires genes to have a log-FC greater than 1.
+```{r}
+tfit <- treat(vfit, lfc=0.1)
+dt <- decideTests(tfit)
+summary(dt)
+```
+
+All genes, up-regulated or down-regulated included, are in the list below.
+```{r}
+de.common <- which(dt[,1]!=0)
+length(de.common)
+```
+
+We can see the names of the genes from the de.common list using the following code:
+```{r}
+head(tfit$genes$SYMBOL[de.common], n=20)
+```
+
+The vennDiagram function can be used to visualize the DE genes that the Asian female patients and white female patients share.
+```{r}
+vennDiagram(dt[,1], circle.col=c("turquoise", "salmon"))
+```
+```{r}
+write.fit(tfit, dt, file="results.txt")
+```
+
+## Examining individual DE genes from top to bottom
+The genes that are most differentially expressed can be listed using the toptreat function.
+```{r}
+Asian.vs.white <- topTreat(tfit, coef=1, n=Inf)
+head(Asian.vs.white)
+```
+
+## Using graphical representations of differential expression results
+To summarise the genes, the log fold change is plot against the log counts per million using the plotMD function.
+```{r}
+plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1], 
+       xlim=c(-8,13))
+```
+
+A more interactive version of this plot can be created using Glimma.
+```{r}
+glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
+         side.main="ENSEMBL", counts=lcpm, groups=group, launch=TRUE)
+```
+
+A heatmap is created of the highest expressed genes. Heatmap.plus is a library that allows for the creation of heatmaps for larger datasets. First, load up the required packages.
+```{r}
+library(gplots)
+library(heatmap.plus)
+```
+
+Next, execute the following code:
+```{r}
+Asian.vs.white.topgenes <- Asian.vs.white$ENSEMBL[1:50]
+i <- which(v$genes$ENSEMBL %in% Asian.vs.white.topgenes)
+mycol <- colorpanel(1000,"blue","white","red")
+par(cex.main=0.8,mar=c(1,1,1,1))
+heatmap.plus(lcpm[i,],  scale="row", labRow=v$genes$SYMBOL[i], labCol=group, col=mycol, cexRow=1,cexCol=0.2, margins = c(8,6), main="HeatMap")
+```
+
+In the heatmap produced, the red regions stand for up-regulated genes, blue regions represent down-regulated genes, and white presents intermediate levels of genes expression.
+
+## Software and code used
+```{r}
+sessionInfo()
+```
 
 
 
