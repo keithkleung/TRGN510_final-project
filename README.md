@@ -64,6 +64,8 @@ Asian females counts data (from GDC portal)
 ## Milestone 2
 - I want to be able to generate plots of my data to display what the sequencing results mean. Some of the plots will likely include boxplots, heatmaps, and mean-variance plots.
   - **Update status 11/3/2020**: *This milestone is ongoing*
+  - **Update status 11/12/2020: This milestone is achieved. However, more changes will be made to the markdown. I will also attempt the "camera" section of the vignette.**
+  - Note: the log-fold-change threshold was changed to 0.1 instead of the default 1. This was done in order to detect more signifantly up and down regulated genes.
 
 ## Deliverable:
 - R Markdown
