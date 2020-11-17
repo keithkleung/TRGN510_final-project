@@ -7,7 +7,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Introduction
+RNA-sequencing is one of the prominent technologies used for gene expression profiling. For this markdown, an edgeR - limma workflow for analyzing RNA-seq counts data is used. Pre-processing and exploring of the data will be performed, and differentially expressed genes will be analyzed using plots and statistics. The analysis performed in this markdown will be based on two groups of patients with varying stages of breast cancer. Both group consists of 20 females, with one group made up of Asians and the second group made up of Caucasians (white).
+
 ## Load in the required packages
+The necessary packages to perform the analyses will first be loaded into R.
 ```{r}
 library(limma)
 library(Glimma)
@@ -16,6 +20,7 @@ library(Homo.sapiens)
 ```
 
 ## Loading in the data
+There will be 40 files loaded into R, with each file representing one patient. The raw gene counts will also be displayed by the code below.
 ```{r}
 setwd("~/R_files/510project")
 
@@ -27,7 +32,7 @@ getwd()
 The data has been loaded in successfully.
 
 ## Grouping the data
-The contents of each file is combined into one dataframe called as ‘x’. The data is grouped according to the parameter of ethnicity: white vs. Asian. EdgeR provides a simplified method of doing this with a single command: readDGE.
+The contents of each file is combined into one data frame called as ‘x’. The data is grouped according to the parameter of ethnicity: white vs. Asian. EdgeR provides a simplified method of doing this with a single command: readDGE.
 ```{r}
 x <- readDGE(files, columns=c(1,2))
 class(x)
@@ -39,7 +44,7 @@ dim(x)
 ```
 The dim function shows that there are 60487 rows (which represents genes) and 40 columns. The 40 columns represents the 40 files (20 Asian females and 20 white females).
 
-The code block below will help to label all the columns in dataframe "x" according to the respective files.
+The code block below will help to label all the columns in data frame "x" according to the respective files.
 ```{r}
 samplenames<-colnames(x)
 sampleNames
@@ -47,11 +52,17 @@ colnames(x) <- samplenames
 ```
 
 ## Organizing the data
-The code below will help to group the files within the data frame according to the patient ethnicity.
+For later analysis, sample-level information related to the experimental design needs to be associated with the columns of the counts matrix. The code below will help to group the files within the data frame according to the patient ethnicity. The tumor grade, with "high" representing stage III or IV cancer and "low" representing stage I or II cancer, for each patient file will also be defined in the "x" DGEList-object.
 ```{r}
 group <- c(rep("Asian",20), rep("white",20))
 x$samples$group <- group
+tumorgrade <- c("low", "high", "low", "low", "low", "low", "low", "low", "low", "low",
+                "low", "high", "low", "low", "low", "high", "low", "low", "low", "high",
+                "low", "low", "low", "high", "low", "low", "low", "low", "low", "low",
+                "high", "low", "high", "low", "low", "low", "low", "low", "high", "low")
+x$samples$tumorgrade <- tumorgrade
 x$samples
+
 ```
 
 Because the “Homo.sapiens” package does not contain the ENSEMBL Gene ID in the format provided by the loaded data, the data must be converted using a substitution function. The digits following the decimal are replaced to match with the key.
@@ -62,7 +73,7 @@ geneid <-gsub("\\.[0-9]*$","", geneid)
 head(geneid)
 ```
 
-The "genes" dataframe is used to store the gene-level information corresponding to the rows of genes in our patient data files. The information required for this data frame is retrieved from the ‘Homo.sapiens’ library. The GeneIDs are associated with the symbol and the chromosome number of each gene.
+The "genes" data frame is used to store the gene-level information corresponding to the rows of genes in our patient data files. The information required for this data frame is retrieved from the ‘Homo.sapiens’ library. The GeneIDs are associated with the symbol and the chromosome number of each gene.
 ```{r}
 genes <- select(Homo.sapiens, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
                 keytype="ENSEMBL")
@@ -78,7 +89,7 @@ x
 
 ## Data Pre-processing
 ## Transformations from the raw scale
-The data is transformed from its raw form to more useable. The calculations of “cpm: counts per million” and “lcpm: log of counts per million” are carried out to do so.
+The data is transformed from its raw form to a more useable one. The calculations of “cpm: counts per million” and “lcpm: log of counts per million” are carried out to do so.
 ```{r}
 cpm <- cpm(x)
 lcpm <- cpm(x, log=TRUE)
@@ -109,7 +120,7 @@ x <- x[keep.exprs,, keep.lib.sizes=FALSE]
 dim(x)
 ```
 
-The number of genes used for interpretation are reduced from the 60,487 to 20886. The filtered versus unfiltered data is presented in a graphical manner using the following lines of code. The package “RColorBrewer” is used to help create the graphs.
+The number of genes used for interpretation are reduced from the 60,487 to 20886. The filtered versus unfiltered data is presented in a graphical manner using the following lines of code. The package “RColorBrewer” is used to help create the graphs. After filtering the data, it can be seen that the plot gets smoothed out.
 ```{r}
 lcpm.cutoff <- log2(10/M + 2/L)
 library(RColorBrewer)
@@ -166,28 +177,35 @@ title(main="B. Example: Normalized data",ylab="Log-cpm")
 ```
 
 ## Unsupervised clustering of samples
-The MDS plot is an informative representation of the similarities and dissimilarities in a sample. The extent of the differences can give an idea of the expected results of the differential expression analysis. The plotMDS function of limma allows us to create the graph. The distances on the plot correspond to the action of different categories on this data.
+The MDS plot is an informative representation of the similarities and dissimilarities in a sample. The extent of the differences can give an idea of the expected results of the differential expression analysis. The plotMDS function of limma allows us to create the graph. The distances on the plot correspond to the action of different categories on this data. There are two plots here: one that compares the two ethnic groups "Asian" vs "white", and one that compares the tumor grade "high" vs "low".
 ```{r}
 lcpm <- cpm(x, log=TRUE)
 par(mfrow=c(1,2))
-group
-levels(group) <-  brewer.pal(nlevels(group), "Set1")
-col.group <- as.character(group)
+col.group <- group
+levels(col.group) <-  brewer.pal(nlevels(col.group), "Set1")
+col.group <- as.character(col.group)
+col.tumorgrade <- tumorgrade
+levels(col.tumorgrade) <-  brewer.pal(nlevels(col.tumorgrade), "Set2")
+col.tumorgrade <- as.character(col.tumorgrade)
 col.group <- c("purple","orange")[group]
+col.tumorgrade <- c("red","blue")[tumorgrade]
 plotMDS(lcpm, labels=group, col=col.group)
 title(main="A. Sample groups")
+plotMDS(lcpm, labels=tumorgrade, col=col.tumorgrade, dim=c(3,4))
+title(main="B. Tumor grade classifications")
 ```
 
-Glimma can be used to create an interactive version of the plot above.
+Glimma can be used to create an interactive version of the plots above.
 ```{r}
-glMDSPlot(lcpm,groups = group)
+glMDSPlot(lcpm, labels=paste(group, tumorgrade, sep="_"), 
+          groups=x$samples[,c(2,5)], launch=TRUE)
 ```
 
 # Differential expression analyses
 ## Creating a design matrix and contrasts
-To begin differential expression analysis, a design matrix with both the Asian group of data and white group of data needs to be created:
+To begin differential expression analysis, a design matrix with both the Asian group of data and white group of data needs to be created. Another column within the matrix, which details the co-variate "tumor grade" will also be generated.
 ```{r}
-design <- model.matrix(~0+group)
+design <- model.matrix(~0+group+tumorgrade)
 colnames(design) <- gsub("group", "", colnames(design))
 design
 ```
@@ -217,12 +235,12 @@ plotSA(efit, main="Final model: Mean-variance trend")
 ```
 
 ## Examining the number of differentially expressed genes
-T-statistics can be used to help see how many genes are significantly up-regulated or down-regulated. In the table below, we see that 6 genes are down-regulated and 7 genes are up-regulated.
+T-statistics can be used to help see how many genes are significantly up-regulated or down-regulated. In the table below, we see that 7 genes are down-regulated and 8 genes are up-regulated.
 ```{r}
 summary(decideTests(efit))
 ```
 
-Additional filtering of significantly DF genes may be done by using the treat method, which requires genes to have a log-FC greater than 1.
+Additional filtering of significantly DF genes may be done by using the treat method. Here, the filter requires genes to have a log-FC greater than a predetermined value, with the value being set here 0.1. Now, there are 7 genes significantly up-regulated and 5 genes significantly down-regulated.
 ```{r}
 tfit <- treat(vfit, lfc=0.1)
 dt <- decideTests(tfit)
@@ -249,14 +267,14 @@ write.fit(tfit, dt, file="results.txt")
 ```
 
 ## Examining individual DE genes from top to bottom
-The genes that are most differentially expressed can be listed using the toptreat function.
+The genes that are most differentially expressed can be listed using the topTreat function.
 ```{r}
 Asian.vs.white <- topTreat(tfit, coef=1, n=Inf)
 head(Asian.vs.white)
 ```
 
 ## Using graphical representations of differential expression results
-To summarise the genes, the log fold change is plot against the log counts per million using the plotMD function.
+To summarize the genes, the log fold change is plot against the log counts per million using the plotMD function.
 ```{r}
 plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1], 
        xlim=c(-8,13))
@@ -268,7 +286,7 @@ glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
          side.main="ENSEMBL", counts=lcpm, groups=group, launch=TRUE)
 ```
 
-A heatmap is created of the highest expressed genes. Heatmap.plus is a library that allows for the creation of heatmaps for larger datasets. First, load up the required packages.
+A heatmap is created of the highest expressed genes. Heatmap.plus is a library that allows for the creation of heatmaps for larger data sets. First, load up the required packages.
 ```{r}
 library(gplots)
 library(heatmap.plus)
@@ -284,6 +302,37 @@ heatmap.plus(lcpm[i,],  scale="row", labRow=v$genes$SYMBOL[i], labCol=group, col
 ```
 
 In the heatmap produced, the red regions stand for up-regulated genes, blue regions represent down-regulated genes, and white presents intermediate levels of genes expression.
+
+
+## Gene set testing with camera
+The c2 curated gene set specific for humans needs to first be loaded into R. The human_c2_v5p2.rdata file will be used here, which is downloaded from the MSigDB collection. The names of the first few gene sets and the total number of gene sets are also observed.
+```{r}
+#Loading in the c2 curated gene set
+load("human_c2_v5p2.rdata")
+
+#Taking a look at the first couple of gene sets within the Homo sapiens c2 curated gene sets
+names(Hs.c2)[1:5]
+
+#Getting the total number of gene sets within Hs.c2
+length(Hs.c2)
+
+```
+
+The gene IDs between the c2 gene sets and the v object defined previously are mapped together using the ids2indices function. A contrast matrix is created that compares the Asian patients data versus the white patients data. Finally, a barcode plot is generated that shows the enrichment of gene sets amongst the highly or lowly ranked genes between the Asian and white groups.
+```{r}
+idx <- ids2indices(Hs.c2, rownames(v$genes))
+```
+
+```{r}
+cam.AsianVswhite <- camera(v,idx,design,contrast=contr.matrix[,1])
+head(cam.AsianVswhite,7)
+```
+
+```{r}
+barcodeplot(efit$t[,1], index=idx$LIM_MAMMARY_LUMINAL_MATURE_UP, 
+            index2=idx$LIM_MAMMARY_LUMINAL_MATURE_DN, main="AsianVswhite")
+```
+
 
 ## Software and code used
 ```{r}
