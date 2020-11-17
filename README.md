@@ -10,7 +10,8 @@
 ## Overview of project
 - RNA-seq is a powerful tool that can be used for gene expression profiling to help with detection of differentially expressed genes between two or more variables of interest. After the sequencing experiment is finished, data analyses can be performed using the generated data files to determine differences between the experimental groups. Such analyses may include mean and variance comparisons, or plotting reads/counts data. For my project, I want to use the bioinfomatics tool "Bioconductor" to be able to analyze RNA-seq data in the HT-seq counts file format. I will use the vignette located here: https://www.bioconductor.org/packages/devel/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html. Data will be obtained by downloading selected files from TCGA database on the GDC data portal. I am interested in comparing differences in breast cancer gene expressions between two different ethnic groups: white and Asian. I will compare 20 females' data for each ethnic group. All patients are diagnosed with infiltrating ductal carcinoma.
   - *After discussing with the professor, I realized that comparing age groups can be tricky due to no concrete basis for defining what is a young vs. old breast cancer patient. I decided to switch to comparing ethnicities as the variable of interest instead. Also, I originally planned on working with groups with 10 patients each. This was a bit too small of a group size. I increased this to 20 patients after talking with the professor.*
-  - **Update 11/12/20: after discussions with the professor, one co-variate will be controlled for differential expression analyses. I will control for tumor grade. Stage 1 and 2 will be considered "low" grade, while stage 3 and 4 will be considered "high" grade**  
+  - **Update 11/12/20: after discussions with the professor, one co-variate will be controlled for differential expression analyses. I will control for tumor grade. Stage 1 and 2 will be considered "low" grade, while stage 3 and 4 will be considered "high" grade**
+  - **Update 11/17/20: the necessary changes have been made to the markdown upon final submission**
  
 
 ## Data
@@ -67,6 +68,7 @@ Asian females counts data (from GDC portal)
   - **Update status 11/3/2020**: *This milestone is ongoing*
   - **Update status 11/12/2020: This milestone is achieved. However, more changes will be made to the markdown - especially with the need to account for one covariate. I will also attempt the "camera" section of the vignette.**
   - Note: the log-fold-change threshold was changed to 0.1 instead of the default 1. This was done in order to detect more signifantly up and down regulated genes.
+  - **Update status 11/17/2020: The camera section has been attempted and completed. The tumor grade covariate has also been taken into account in the markdown.**
 
 ## Deliverable:
 - R Markdown
